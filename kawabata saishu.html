@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="採取記録">
+<title>採取記録 — 川端生コン</title>
+<style>
+:root {
+  --blue:#1B4F8A; --blue2:#2E6DB4; --pale:#EBF2FA;
+  --accent:#E8870A; --red:#C0392B; --green:#1E8449;
+  --bg:#F0F2F5; --sur:#fff; --s2:#F7F8FA;
+  --bdr:#E2E6EA; --txt:#1A1A2E; --t2:#5A6472; --t3:#9AA3AD;
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html{height:100%;height:-webkit-fill-available;}
+body{
+  position:fixed;width:100%;height:100%;height:-webkit-fill-available;
+  font-family:-apple-system,'Hiragino Sans',sans-serif;
+  font-size:14px;color:var(--txt);background:var(--bg);
+  overflow:hidden;
+  overscroll-behavior:none;
+}
+
+/* ===== 全スクリーン共通：position:fixed で完全固定 ===== */
+.screen{
+  position:fixed;
+  top:0;left:0;right:0;bottom:0;
+  display:flex;flex-direction:column;
+  background:var(--bg);
+  visibility:hidden;
+  pointer-events:none;
+  z-index:1;
+}
+.screen.active{
+  visibility:visible;
+  pointer-events:auto;
+  z-index:2;
+}
+
+/* ヘッダー */
+.hdr{
+  flex-shrink:0;
+  background:linear-gradient(135deg,var(--blue),var(--blue2));
+  color:#fff;
+  padding-top: calc(10px + env(safe-area-inset-top, 0px));
+  padding-bottom: 10px;
+  padding-left: 12px;
+  padding-right: 12px;
+  display:flex;align-items:center;justify-content:space-between;
+  box-shadow:0 2px 8px rgba(0,0,0,.2);
+}
+.hdr-title{font-size:15px;font-weight:700;}
+.hdr-sub{font-size:10px;opacity:.7;margin-top:1px;}
+.hdr-btns{display:flex;gap:6px;}
+.btn-master{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:7px;padding:6px 10px;font-size:12px;cursor:pointer;}
+.btn-new{background:var(--accent);color:#fff;border:none;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;}
+
+/* サブバー */
+.bar{flex-shrink:0;display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--sur);border-bottom:1px solid var(--bdr);}
+.back-btn{background:none;border:none;color:var(--blue);font-size:15px;cursor:pointer;padding:4px 2px;font-weight:600;}
+.bar-title{font-size:14px;font-weight:600;flex:1;}
+.bar-edit{background:var(--blue);color:#fff;border:none;border-radius:7px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer;}
+.bar-del{background:#FDEEEC;color:var(--red);border:1px solid #F5C6C2;border-radius:7px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer;}
+.bar-save{background:var(--blue);color:#fff;border:none;border-radius:7px;padding:7px 18px;font-size:13px;font-weight:700;cursor:pointer;}
+.bar-cancel{background:var(--s2);color:var(--txt);border:1px solid var(--bdr);border-radius:7px;padding:7px 12px;font-size:13px;cursor:pointer;}
+
+/* スクロールエリア */
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+
+/* 検索 */
+.search-box{flex-shrink:0;padding:8px 10px;background:var(--sur);border-bottom:1px solid var(--bdr);}
+.search-box input{width:100%;border:1px solid var(--bdr);border-radius:8px;padding:7px 12px;font-size:13px;background:var(--s2);outline:none;}
+
+/* 一覧 */
+.rec-item{padding:10px 12px;border-bottom:1px solid var(--bdr);cursor:pointer;background:var(--sur);}
+.rec-item.sel{background:var(--pale);border-left:3px solid var(--blue);}
+.ri-date{font-size:13px;font-weight:700;color:var(--blue);}
+.ri-name{font-size:13px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ri-sub{font-size:11px;color:var(--t2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ri-bdg{display:flex;gap:5px;margin-top:4px;flex-wrap:wrap;}
+.bdg{font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;background:var(--pale);color:var(--blue);}
+.bdg.or{background:#FEF3E2;color:var(--accent);}
+.empty-msg{padding:40px;text-align:center;color:var(--t3);}
+
+/* 詳細 */
+.detail-pad{padding:12px;}
+.d-hero{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;border-radius:10px;padding:14px 16px;margin-bottom:12px;}
+.d-date{font-size:18px;font-weight:800;}
+.d-meta{font-size:12px;opacity:.8;margin-top:2px;}
+.d-stats{display:flex;gap:16px;margin-top:10px;flex-wrap:wrap;}
+.d-stat-v{font-size:20px;font-weight:800;}
+.d-stat-l{font-size:10px;opacity:.8;}
+.d-card{background:var(--sur);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.07);margin-bottom:10px;overflow:hidden;}
+.d-sec{font-size:10px;font-weight:700;color:var(--t2);letter-spacing:1px;padding:7px 12px 5px;background:var(--s2);border-bottom:1px solid var(--bdr);}
+.d-row{display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--bdr);font-size:13px;}
+.d-row:last-child{border-bottom:none;}
+.d-lbl{color:var(--t2);}
+.d-val{text-align:right;max-width:60%;font-weight:500;}
+.k-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px 12px;}
+.k-cell{background:var(--s2);border-radius:7px;padding:6px;text-align:center;}
+.k-no{font-size:10px;color:var(--t3);}
+.k-val{font-size:15px;font-weight:700;}
+.k-unit{font-size:9px;color:var(--t2);}
+.avg-bar{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--pale);}
+.avg-l{font-size:12px;color:var(--t2);}
+.avg-v{font-size:16px;font-weight:800;color:var(--blue);}
+
+/* フォーム */
+.form-pad{padding:12px;}
+.fs{margin-bottom:18px;}
+.fs-ttl{font-size:10px;font-weight:700;color:var(--blue);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;padding-bottom:5px;border-bottom:2px solid var(--pale);}
+.fg{display:flex;flex-direction:column;gap:3px;flex:1;min-width:100px;margin-bottom:8px;}
+.fg label{font-size:11px;font-weight:600;color:var(--t2);}
+.fg input,.fg select,.fg textarea{border:1px solid var(--bdr);border-radius:7px;padding:8px 10px;font-size:14px;background:var(--s2);outline:none;width:100%;font-family:inherit;}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--blue2);background:#fff;}
+.frow{display:flex;gap:8px;flex-wrap:wrap;}
+.chip-area{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;}
+.chip{background:var(--s2);border:1px solid var(--bdr);border-radius:20px;padding:4px 11px;font-size:12px;cursor:pointer;transition:all .12s;}
+.chip.sel,.chip:active{background:var(--blue);color:#fff;border-color:var(--blue);}
+.k3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:6px;}
+.ki label{font-size:10px;color:var(--t3);display:block;margin-bottom:3px;}
+.ki input{border:1px solid var(--bdr);border-radius:6px;padding:7px 8px;font-size:14px;width:100%;background:var(--s2);outline:none;text-align:right;}
+.ki input:focus{border-color:var(--blue2);}
+.avg-pre{background:var(--pale);border-radius:7px;padding:7px 12px;font-size:13px;color:var(--blue);font-weight:700;text-align:right;margin-bottom:12px;}
+.flow-row{display:flex;align-items:center;gap:6px;}
+.flow-row input{flex:1;}
+.flow-x{font-weight:700;color:var(--t2);font-size:15px;}
+.del-zone{margin-top:24px;padding-top:16px;border-top:1px solid var(--bdr);}
+.btn-del-full{width:100%;background:#FDEEEC;color:var(--red);border:1px solid #F5C6C2;border-radius:8px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;}
+
+/* マスタ */
+.master-pad{padding:12px;}
+.irow{display:flex;gap:6px;margin-bottom:8px;}
+.irow input{flex:1;border:1px solid var(--bdr);border-radius:7px;padding:8px 10px;font-size:14px;background:var(--s2);outline:none;}
+.add-btn{background:var(--green);color:#fff;border:none;border-radius:7px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
+
+/* ローディング */
+.loading{padding:40px;text-align:center;color:var(--t3);}
+.sp{width:26px;height:26px;border:3px solid var(--bdr);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* トースト */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1A1A2E;color:#fff;padding:9px 22px;border-radius:30px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<!-- ① 一覧 -->
+<div id="scr-list" class="screen active">
+  <div class="hdr">
+    <div><div class="hdr-title">コンクリート採取記録</div><div class="hdr-sub">川端生コン</div></div>
+    <div class="hdr-btns">
+      <button class="btn-master" id="masterBtn">マスタ管理</button>
+      <button class="btn-new" onclick="showNewForm()">＋ 新規記録</button>
+    </div>
+  </div>
+  <div class="search-box">
+    <input type="text" id="searchInput" placeholder="施工者・工事名・日付で検索" oninput="filterList()">
+  </div>
+  <div class="scroll" id="recordList">
+    <div class="loading"><div class="sp"></div>読み込み中...</div>
+  </div>
+</div>
+
+<!-- ② 詳細 -->
+<div id="scr-detail" class="screen">
+  <div class="hdr">
+    <div><div class="hdr-title">コンクリート採取記録</div><div class="hdr-sub">川端生コン</div></div>
+    <div class="hdr-btns">
+      <button class="btn-master" onclick="go('master')">マスタ管理</button>
+      <button class="btn-new" onclick="showNewForm()">＋ 新規記録</button>
+    </div>
+  </div>
+  <div class="bar">
+    <button class="back-btn" onclick="go('list')">← 一覧</button>
+    <span class="bar-title" id="detailBarTitle"></span>
+    <button class="bar-del" id="detailDelBtn">削除</button>
+    <button class="bar-edit" id="detailEditBtn">編集</button>
+  </div>
+  <div class="scroll"><div class="detail-pad" id="detailContent"></div></div>
+</div>
+
+<!-- ③ フォーム -->
+<div id="scr-form" class="screen">
+  <div class="hdr">
+    <div><div class="hdr-title">コンクリート採取記録</div><div class="hdr-sub">川端生コン</div></div>
+  </div>
+  <div class="bar">
+    <button class="bar-cancel" onclick="cancelForm()">キャンセル</button>
+    <span class="bar-title" id="formTitle">新規採取記録</span>
+    <button class="bar-save" onclick="saveRecord()">保存</button>
+  </div>
+  <div class="scroll"><div class="form-pad" id="formPad">
+    <div class="fs">
+      <div class="fs-ttl">日時・記録情報</div>
+      <div class="frow">
+        <div class="fg" style="max-width:80px"><label>年</label><input type="number" id="f_year"></div>
+        <div class="fg" style="max-width:58px"><label>月</label><input type="number" id="f_month" min="1" max="12"></div>
+        <div class="fg" style="max-width:58px"><label>日</label><input type="number" id="f_day" min="1" max="31"></div>
+        <div class="fg" style="max-width:68px"><label>曜日</label>
+          <select id="f_youbi"><option value="">-</option><option>月</option><option>火</option><option>水</option><option>木</option><option>金</option><option>土</option><option>日</option></select>
+        </div>
+        <div class="fg"><label>天候</label><input type="text" id="f_tenki" placeholder="晴れ"></div>
+      </div>
+    </div>
+    <div class="fs">
+      <div class="fs-ttl">施工者 / 工事名</div>
+      <div class="fg"><label>施工者</label><input type="text" id="f_sekosha" placeholder="施工者名を入力" oninput="filterKojiChips()"><div class="chip-area" id="sekosha_chips"></div></div>
+      <div class="fg"><label>工事名</label><input type="text" id="f_kojimei" placeholder="工事名を入力"><div class="chip-area" id="kojimei_chips"></div></div>
+    </div>
+    <div class="fs">
+      <div class="fs-ttl">配合・採取情報</div>
+      <div class="frow">
+        <div class="fg"><label>配合</label><input type="text" id="f_haigo" placeholder="例：24-18-20N"></div>
+        <div class="fg" style="max-width:90px"><label>採取本数</label><input type="number" id="f_honsu"></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label>型枠NO</label><input type="text" id="f_katawaku"></div>
+        <div class="fg"><label>採取車両車番</label><input type="text" id="f_sharyo"></div>
+      </div>
+    </div>
+    <div class="fs">
+      <div class="fs-ttl">配合詳細</div>
+      <div class="frow">
+        <div class="fg"><label>添加率[%]</label><input type="number" step="0.01" id="f_tenka"></div>
+        <div class="fg"><label>別添 A</label><input type="number" step="0.01" id="f_betten_a"></div>
+        <div class="fg"><label>使用水</label><input type="number" step="0.1" id="f_mizu"></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label>気温[℃]</label><input type="number" id="f_kion"></div>
+        <div class="fg"><label>CT[℃]</label><input type="number" id="f_ct"></div>
+      </div>
+    </div>
+    <div class="fs">
+      <div class="fs-ttl">試験結果</div>
+      <div class="frow">
+        <div class="fg"><label>スランプ[㎝]</label><input type="number" step="0.5" id="f_slump"></div>
+        <div class="fg"><label>フロー[㎝]（幅×高さ）</label>
+          <div class="flow-row">
+            <input type="number" step="0.5" id="f_flow1" placeholder="幅">
+            <span class="flow-x">×</span>
+            <input type="number" step="0.5" id="f_flow2" placeholder="高さ">
+          </div>
+        </div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label>空気量[%]</label><input type="number" step="0.1" id="f_air"></div>
+        <div class="fg"><label>コンクリート温度[℃]</label><input type="number" step="0.1" id="f_ctemp"></div>
+        <div class="fg"><label>単位水量[kg/m³]</label><input type="number" id="f_tani"></div>
+      </div>
+    </div>
+    <div class="fs">
+      <div class="fs-ttl">強度試験（N/㎟）</div>
+      <div style="font-size:12px;color:var(--t2);margin-bottom:6px">1週</div>
+      <div class="k3">
+        <div class="ki"><label>No.1</label><input type="number" step="0.1" id="f_1w_1" oninput="calcAvg('1w')"></div>
+        <div class="ki"><label>No.2</label><input type="number" step="0.1" id="f_1w_2" oninput="calcAvg('1w')"></div>
+        <div class="ki"><label>No.3</label><input type="number" step="0.1" id="f_1w_3" oninput="calcAvg('1w')"></div>
+      </div>
+      <div class="avg-pre" id="avg_1w">平均値 —</div>
+      <div style="font-size:12px;color:var(--t2);margin-bottom:6px">4週</div>
+      <div class="k3">
+        <div class="ki"><label>No.1</label><input type="number" step="0.1" id="f_4w_1" oninput="calcAvg('4w')"></div>
+        <div class="ki"><label>No.2</label><input type="number" step="0.1" id="f_4w_2" oninput="calcAvg('4w')"></div>
+        <div class="ki"><label>No.3</label><input type="number" step="0.1" id="f_4w_3" oninput="calcAvg('4w')"></div>
+      </div>
+      <div class="avg-pre" id="avg_4w">平均値 —</div>
+    </div>
+    <div class="fs">
+      <div class="fs-ttl">備考</div>
+      <div class="fg"><textarea id="f_biko" rows="3" style="resize:vertical"></textarea></div>
+    </div>
+    <div class="del-zone" id="delZone" style="display:none">
+      <button class="btn-del-full" onclick="deleteCurrentRecord()">この記録を削除</button>
+    </div>
+  </div></div>
+</div>
+
+<!-- ④ マスタ -->
+<div id="scr-master" class="screen">
+  <div class="hdr">
+    <div><div class="hdr-title">コンクリート採取記録</div><div class="hdr-sub">川端生コン</div></div>
+  </div>
+  <div class="bar">
+    <button class="back-btn" onclick="go('list')">← 一覧</button>
+    <span class="bar-title">マスタ管理</span>
+  </div>
+  <div class="scroll"><div class="master-pad">
+    <div class="fs">
+      <div class="fs-ttl">施工者</div>
+      <div class="irow"><input type="text" id="new_sekosha" placeholder="施工者名を入力"><button class="add-btn" onclick="addMaster('sekosha')">追加</button></div>
+      <div class="chip-area" id="master_sekosha_chips"></div>
+    </div>
+    <div class="fs">
+      <div class="fs-ttl">工事名</div>
+      <div class="irow"><input type="text" id="new_kojimei" placeholder="工事名を入力"><button class="add-btn" onclick="addMaster('kojimei')">追加</button></div>
+      <div class="chip-area" id="master_kojimei_chips"></div>
+    </div>
+  </div></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SB_URL = 'https://bpjzldlabuworerjspyv.supabase.co';
+const SB_KEY = 'sb_publishable_4hIoNkRfxQlk8GioUQDV-A_KPjCQtBQ';
+
+const api = async (method, path, body) => {
+  const r = await fetch(`${SB_URL}/rest/v1/${path}`, {
+    method,
+    headers: {
+      'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': method==='POST' ? 'return=representation' : 'return=minimal'
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (method==='DELETE'||method==='PATCH') return;
+  return r.json();
+};
+
+let allRecords=[], masters={sekosha:[],kojimei:[]}, currentId=null, editingId=null;
+
+// ===== スクリーン切替（position:fixed で完全固定） =====
+function go(name) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(`scr-${name}`).classList.add('active');
+  if (name==='master') renderMasterChips();
+}
+
+// ===== 初期化 =====
+async function init() {
+  document.getElementById('masterBtn').onclick = ()=>go('master');
+  await loadMasters();
+  await loadRecords();
+}
+
+async function loadRecords() {
+  const d = await api('GET','records?order=year.desc,month.desc,day.desc&select=*');
+  allRecords = d||[];
+  renderList(allRecords);
+}
+
+async function loadMasters() {
+  const d = await api('GET','masters?select=*');
+  masters.sekosha = (d||[]).filter(m=>m.type==='sekosha');
+  masters.kojimei = (d||[]).filter(m=>m.type==='kojimei');
+}
+
+// ===== 一覧 =====
+function renderList(records) {
+  const el = document.getElementById('recordList');
+  if (!records.length) { el.innerHTML='<div class="empty-msg">記録がありません</div>'; return; }
+  el.innerHTML = records.map(r=>{
+    const b=[];
+    if(r.slump!=null) b.push(`<span class="bdg">SL ${r.slump}㎝</span>`);
+    if(r.air!=null) b.push(`<span class="bdg">A ${r.air}%</span>`);
+    if(r.tanisuiryo!=null) b.push(`<span class="bdg or">W ${r.tanisuiryo}kg</span>`);
+    return `<div class="rec-item${r.id===currentId?' sel':''}" onclick="showDetail('${r.id}')">
+      <div class="ri-date">${r.year}/${p2(r.month)}/${p2(r.day)}（${r.youbi||''}）</div>
+      <div class="ri-name">${r.sekosha||'（施工者未入力）'}</div>
+      <div class="ri-sub">${r.kojimei||''}${r.haigo?'　'+r.haigo:''}</div>
+      <div class="ri-bdg">${b.join('')}</div>
+    </div>`;
+  }).join('');
+}
+
+function filterList() {
+  const q=document.getElementById('searchInput').value;
+  renderList(q ? allRecords.filter(r=>
+    (r.sekosha||'').includes(q)||(r.kojimei||'').includes(q)||
+    `${r.year}/${r.month}/${r.day}`.includes(q)||(r.haigo||'').includes(q)
+  ) : allRecords);
+}
+
+function p2(n){return String(n||'').padStart(2,'0');}
+
+// ===== 詳細 =====
+function showDetail(id) {
+  currentId=id;
+  const r=allRecords.find(x=>x.id===id);
+  if(!r) return;
+
+  document.getElementById('detailBarTitle').textContent=`${r.year}/${p2(r.month)}/${p2(r.day)}`;
+  document.getElementById('detailEditBtn').onclick=()=>showEditForm(id);
+  document.getElementById('detailDelBtn').onclick=()=>deleteRecord(id);
+
+  const fv=v=>(v!=null&&v!=='')?v:'-';
+  const avg=(a,b,c)=>{const v=[a,b,c].filter(x=>x!=null);return v.length?(v.reduce((s,x)=>s+x,0)/v.length).toFixed(1):null;};
+  const flow=r.slump_flow&&r.slump_flow2?`${r.slump_flow} × ${r.slump_flow2} ㎝`:r.slump_flow?`${r.slump_flow} ㎝`:'-';
+
+  const kBlock=(lbl,n1,n2,n3)=>{
+    const av=avg(n1,n2,n3);
+    return `<div class="d-sec">${lbl} 強度</div>
+    <div class="k-grid">${[n1,n2,n3].map((v,i)=>`<div class="k-cell"><div class="k-no">No.${i+1}</div><div class="k-val">${fv(v)}</div><div class="k-unit">N/㎟</div></div>`).join('')}</div>
+    <div class="avg-bar"><span class="avg-l">平均値</span><span class="avg-v">${av?av+' N/㎟':'—'}</span></div>`;
+  };
+
+  document.getElementById('detailContent').innerHTML=`
+    <div class="d-hero">
+      <div class="d-date">${r.year}/${p2(r.month)}/${p2(r.day)}（${r.youbi||''}）</div>
+      <div class="d-meta">${r.tenki||''}</div>
+      <div class="d-stats">
+        ${r.slump!=null?`<div><div class="d-stat-v">${r.slump}</div><div class="d-stat-l">SL㎝</div></div>`:''}
+        ${r.air!=null?`<div><div class="d-stat-v">${r.air}</div><div class="d-stat-l">空気%</div></div>`:''}
+        ${r.tanisuiryo!=null?`<div><div class="d-stat-v">${r.tanisuiryo}</div><div class="d-stat-l">単位水量</div></div>`:''}
+        ${avg(r.nmm2_4w_1,r.nmm2_4w_2,r.nmm2_4w_3)?`<div><div class="d-stat-v">${avg(r.nmm2_4w_1,r.nmm2_4w_2,r.nmm2_4w_3)}</div><div class="d-stat-l">4週N/㎟</div></div>`:''}
+      </div>
+    </div>
+    <div class="d-card">
+      <div class="d-sec">施工者 / 工事名</div>
+      <div class="d-row"><span class="d-lbl">施工者</span><span class="d-val">${fv(r.sekosha)}</span></div>
+      <div class="d-row"><span class="d-lbl">工事名</span><span class="d-val">${fv(r.kojimei)}</span></div>
+    </div>
+    <div class="d-card">
+      <div class="d-sec">配合・採取情報</div>
+      <div class="d-row"><span class="d-lbl">配合</span><span class="d-val">${fv(r.haigo)}</span></div>
+      <div class="d-row"><span class="d-lbl">採取本数</span><span class="d-val">${r.saishu_honsu!=null?r.saishu_honsu+' 本':'-'}</span></div>
+      <div class="d-row"><span class="d-lbl">型枠NO</span><span class="d-val">${fv(r.katawaku_no)}</span></div>
+      <div class="d-row"><span class="d-lbl">採取車両</span><span class="d-val">${fv(r.sharyo_bango)}</span></div>
+    </div>
+    <div class="d-card">
+      <div class="d-sec">配合詳細</div>
+      <div class="d-row"><span class="d-lbl">添加率</span><span class="d-val">${r.tenka_ritu!=null?r.tenka_ritu+' %':'-'}</span></div>
+      <div class="d-row"><span class="d-lbl">別添 A</span><span class="d-val">${fv(r.betten_a)}</span></div>
+      <div class="d-row"><span class="d-lbl">使用水</span><span class="d-val">${fv(r.shiyo_mizu)}</span></div>
+      <div class="d-row"><span class="d-lbl">気温</span><span class="d-val">${r.kion!=null?r.kion+' ℃':'-'}</span></div>
+      <div class="d-row"><span class="d-lbl">CT</span><span class="d-val">${r.ct!=null?r.ct+' ℃':'-'}</span></div>
+    </div>
+    <div class="d-card">
+      <div class="d-sec">試験結果</div>
+      <div class="d-row"><span class="d-lbl">スランプ</span><span class="d-val">${r.slump!=null?r.slump+' ㎝':'-'}</span></div>
+      <div class="d-row"><span class="d-lbl">フロー</span><span class="d-val">${flow}</span></div>
+      <div class="d-row"><span class="d-lbl">空気量</span><span class="d-val">${r.air!=null?r.air+' %':'-'}</span></div>
+      <div class="d-row"><span class="d-lbl">コンクリート温度</span><span class="d-val">${r.conc_temp!=null?r.conc_temp+' ℃':'-'}</span></div>
+      <div class="d-row"><span class="d-lbl">単位水量</span><span class="d-val">${r.tanisuiryo!=null?r.tanisuiryo+' kg/m³':'-'}</span></div>
+    </div>
+    <div class="d-card">${kBlock('1週',r.nmm2_1w_1,r.nmm2_1w_2,r.nmm2_1w_3)}</div>
+    <div class="d-card">${kBlock('4週',r.nmm2_4w_1,r.nmm2_4w_2,r.nmm2_4w_3)}</div>
+    ${r.biko?`<div class="d-card"><div class="d-sec">備考</div><div class="d-row"><span class="d-val" style="max-width:100%;text-align:left">${r.biko}</span></div></div>`:''}
+  `;
+
+  // 詳細スクロールをトップに
+  document.querySelector('#scr-detail .scroll').scrollTop=0;
+  go('detail');
+}
+
+// ===== フォーム =====
+function showNewForm() {
+  editingId=null;
+  document.getElementById('formTitle').textContent='新規採取記録';
+  document.getElementById('delZone').style.display='none';
+  clearForm();
+  const now=new Date();
+  document.getElementById('f_year').value=now.getFullYear();
+  document.getElementById('f_month').value=now.getMonth()+1;
+  document.getElementById('f_day').value=now.getDate();
+  document.getElementById('f_youbi').value=['日','月','火','水','木','金','土'][now.getDay()];
+  renderFormChips();
+  document.querySelector('#scr-form .scroll').scrollTop=0;
+  go('form');
+}
+
+function showEditForm(id) {
+  editingId=id;
+  const r=allRecords.find(x=>x.id===id);
+  if(!r) return;
+  document.getElementById('formTitle').textContent='記録を編集';
+  document.getElementById('delZone').style.display='block';
+  clearForm();
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v!=null?v:'';};
+  set('f_year',r.year);set('f_month',r.month);set('f_day',r.day);
+  set('f_youbi',r.youbi);set('f_tenki',r.tenki);
+  set('f_sekosha',r.sekosha);set('f_kojimei',r.kojimei);
+  set('f_haigo',r.haigo);set('f_honsu',r.saishu_honsu);
+  set('f_katawaku',r.katawaku_no);set('f_sharyo',r.sharyo_bango);
+  set('f_tenka',r.tenka_ritu);set('f_betten_a',r.betten_a);
+  set('f_mizu',r.shiyo_mizu);set('f_kion',r.kion);set('f_ct',r.ct);
+  set('f_slump',r.slump);set('f_flow1',r.slump_flow);set('f_flow2',r.slump_flow2);
+  set('f_air',r.air);set('f_ctemp',r.conc_temp);set('f_tani',r.tanisuiryo);
+  ['1w','4w'].forEach(w=>{[1,2,3].forEach(i=>{set(`f_${w}_${i}`,r[`nmm2_${w}_${i}`]);});calcAvg(w);});
+  set('f_biko',r.biko);
+  renderFormChips();
+  document.querySelector('#scr-form .scroll').scrollTop=0;
+  go('form');
+}
+
+function cancelForm() { editingId ? go('detail') : go('list'); }
+
+function clearForm() {
+  ['f_year','f_month','f_day','f_tenki','f_sekosha','f_kojimei','f_haigo',
+   'f_honsu','f_katawaku','f_sharyo','f_tenka','f_betten_a','f_mizu',
+   'f_kion','f_ct','f_slump','f_flow1','f_flow2','f_air','f_ctemp','f_tani',
+   'f_1w_1','f_1w_2','f_1w_3','f_4w_1','f_4w_2','f_4w_3','f_biko']
+    .forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['1w','4w'].forEach(w=>{document.getElementById(`avg_${w}`).textContent='平均値 —';});
+}
+
+async function saveRecord() {
+  const n=v=>{const x=parseFloat(v);return isNaN(x)?null:x;};
+  const ni=v=>{const x=parseInt(v);return isNaN(x)?null:x;};
+  const s=id=>(document.getElementById(id)?.value?.trim())||null;
+  const body={
+    year:ni(s('f_year')),month:ni(s('f_month')),day:ni(s('f_day')),
+    youbi:s('f_youbi'),tenki:s('f_tenki'),sekosha:s('f_sekosha'),kojimei:s('f_kojimei'),
+    haigo:s('f_haigo'),saishu_honsu:ni(s('f_honsu')),
+    katawaku_no:s('f_katawaku'),sharyo_bango:s('f_sharyo'),
+    tenka_ritu:n(s('f_tenka')),betten_a:n(s('f_betten_a')),
+    shiyo_mizu:n(s('f_mizu')),kion:ni(s('f_kion')),ct:ni(s('f_ct')),
+    slump:n(s('f_slump')),slump_flow:n(s('f_flow1')),slump_flow2:n(s('f_flow2')),
+    air:n(s('f_air')),conc_temp:n(s('f_ctemp')),tanisuiryo:n(s('f_tani')),
+    nmm2_1w_1:n(s('f_1w_1')),nmm2_1w_2:n(s('f_1w_2')),nmm2_1w_3:n(s('f_1w_3')),
+    nmm2_4w_1:n(s('f_4w_1')),nmm2_4w_2:n(s('f_4w_2')),nmm2_4w_3:n(s('f_4w_3')),
+    biko:s('f_biko')
+  };
+  if(body.sekosha&&!masters.sekosha.find(m=>m.name===body.sekosha)){
+    await api('POST','masters',{type:'sekosha',name:body.sekosha,sekosha_id:null});
+    await loadMasters();
+  }
+  if(body.kojimei&&!masters.kojimei.find(m=>m.name===body.kojimei)){
+    const ss=masters.sekosha.find(m=>m.name===body.sekosha);
+    await api('POST','masters',{type:'kojimei',name:body.kojimei,sekosha_id:ss?ss.id:null});
+    await loadMasters();
+  }
+  if(editingId){
+    await api('PATCH',`records?id=eq.${editingId}`,body);
+    await loadRecords();
+    showToast('保存しました');
+    showDetail(editingId);
+  } else {
+    const res=await api('POST','records',body);
+    await loadRecords();
+    showToast('保存しました');
+    if(res&&res[0]) showDetail(res[0].id); else go('list');
+  }
+}
+
+async function deleteRecord(id) {
+  if(!confirm('この記録を削除しますか？元に戻せません。')) return;
+  await api('DELETE',`records?id=eq.${id}`);
+  currentId=null;
+  await loadRecords();
+  showToast('削除しました');
+  go('list');
+}
+function deleteCurrentRecord(){if(editingId)deleteRecord(editingId);}
+
+// ===== 平均値 =====
+function calcAvg(w){
+  const v=[1,2,3].map(i=>parseFloat(document.getElementById(`f_${w}_${i}`).value)).filter(x=>!isNaN(x));
+  document.getElementById(`avg_${w}`).textContent=v.length
+    ?`平均値　${(v.reduce((s,x)=>s+x,0)/v.length).toFixed(1)} N/㎟`:'平均値 —';
+}
+
+// ===== チップ =====
+function renderFormChips(){
+  const ss=document.getElementById('f_sekosha')?.value||'';
+  document.getElementById('sekosha_chips').innerHTML=
+    masters.sekosha.map(m=>`<span class="chip${m.name===ss?' sel':''}" onclick="selectSeko('${m.name}')">${m.name}</span>`).join('');
+  filterKojiChips();
+}
+function selectSeko(name){
+  document.getElementById('f_sekosha').value=name;
+  document.getElementById('f_kojimei').value='';
+  renderFormChips();
+}
+function filterKojiChips(){
+  const ss=document.getElementById('f_sekosha')?.value||'';
+  const kj=document.getElementById('f_kojimei')?.value||'';
+  const linked=masters.kojimei.filter(m=>!m.sekosha_id||masters.sekosha.find(s=>s.id===m.sekosha_id&&s.name===ss));
+  const list=linked.length?linked:masters.kojimei;
+  document.getElementById('kojimei_chips').innerHTML=
+    list.map(m=>`<span class="chip${m.name===kj?' sel':''}" onclick="selectKoji('${m.name}')">${m.name}</span>`).join('');
+  document.getElementById('sekosha_chips').innerHTML=
+    masters.sekosha.map(m=>`<span class="chip${m.name===ss?' sel':''}" onclick="selectSeko('${m.name}')">${m.name}</span>`).join('');
+}
+function selectKoji(name){
+  document.getElementById('f_kojimei').value=name;
+  filterKojiChips();
+}
+
+// ===== マスタ =====
+function renderMasterChips(){
+  document.getElementById('master_sekosha_chips').innerHTML=
+    masters.sekosha.map(m=>`<span class="chip" onclick="delMaster('${m.id}','sekosha')">${m.name} ×</span>`).join('');
+  document.getElementById('master_kojimei_chips').innerHTML=
+    masters.kojimei.map(m=>`<span class="chip" onclick="delMaster('${m.id}','kojimei')">${m.name} ×</span>`).join('');
+}
+async function addMaster(type){
+  const inp=document.getElementById(`new_${type}`);
+  const name=inp.value.trim();
+  if(!name) return;
+  if(masters[type].find(m=>m.name===name)){showToast('既に登録済みです');return;}
+  await api('POST','masters',{type,name,sekosha_id:null});
+  inp.value='';
+  await loadMasters();
+  renderMasterChips();
+  showToast('登録しました');
+}
+async function delMaster(id,type){
+  if(!confirm('削除しますか？')) return;
+  await api('DELETE',`masters?id=eq.${id}`);
+  await loadMasters();
+  renderMasterChips();
+}
+
+// ===== トースト =====
+function showToast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2200);
+}
+
+init();
+</script>
+</body>
+</html>
